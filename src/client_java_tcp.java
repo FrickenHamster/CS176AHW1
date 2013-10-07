@@ -6,7 +6,11 @@
  */
 public class client_java_tcp
 {
-
+	
+	private String host;
+	private int port;
+	
+	
 	public client_java_tcp()
 	{
 
