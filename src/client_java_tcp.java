@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Scanner;
 
 /**
  * Created with IntelliJ IDEA.
@@ -9,7 +10,7 @@ import java.net.*;
  */
 public class client_java_tcp
 {
-	
+
 	private String host;
 	private int port;
 	private String username;
@@ -17,7 +18,7 @@ public class client_java_tcp
 	private Socket socket;
 
 	private String identifier;
-	
+
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
 
@@ -27,62 +28,86 @@ public class client_java_tcp
 	public static final byte PRINTALL = 0x03;
 	public static final byte SEND = 0x04;
 	public static final byte MESSAGE = 0x05;
-	
+
 	public client_java_tcp(String host, int port, String userName)
 	{
 		this.host = host;
 		this.port = port;
 		this.username = userName;
 	}
-	
+
 	public void connect()
 	{
 		try
 		{
 			socket = new Socket(host, port);
-			
+
 			outputStream = new DataOutputStream(socket.getOutputStream());
-			inputStream = new DataInputStream(new BufferedInputStream( socket.getInputStream()));
-			
+			inputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+
 			sendConnect();
-			while(true)
+			outer:
+			while (inputStream.available() != -1)
 			{
-				while ( inputStream.available() != -1 )
+				
+				int packetSize = inputStream.readShort();
+				System.out.println("read bytearray size:" + packetSize);
+				byte packetBuffer[] = new byte[packetSize];
+				int byteTrans = 0;
+				while (byteTrans < packetSize)
 				{
-					int packetSize = inputStream.readShort() ;
-					System.out.println( "read bytearray size:" + packetSize );
-					byte packetBuffer[] = new byte[packetSize];
-					int byteTrans = 0;
-					while ( byteTrans < packetSize )
+					inputStream.read(packetBuffer, byteTrans, 1);
+					byteTrans++;
+				}
+				ByteArrayInputStream bin = new ByteArrayInputStream(packetBuffer);
+				DataInputStream packetStream = new DataInputStream(bin);
+				int id = packetStream.readByte();
+				System.out.println("read id:" + id);
+				switch (id)
+				{
+					case ACCEPTED:
 					{
-						inputStream.read( packetBuffer , byteTrans , 1 );
-						byteTrans++;
-					}
-					ByteArrayInputStream bin = new ByteArrayInputStream( packetBuffer );
-					DataInputStream packetStream = new DataInputStream(bin);
-					int id = packetStream.readByte();
-					System.out.println("read id:" + id);
-					switch (id)
-					{
-						case ACCEPTED:
-						{
-							identifier = packetStream.readUTF();
-							break;
-						}
-						case MESSAGE:
-						{
-							System.out.println(packetStream.readUTF());
-							break;
-						}
+						identifier = packetStream.readUTF();
+						
+						break outer;
 					}
 				}
 			}
+			
+			enterCommand();
+
+			
 		} catch (UnknownHostException e)
 		{
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
 		} catch (IOException e)
 		{
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+		}
+	}
+	
+	public void enterCommand()
+	{
+		Scanner scanner = new Scanner(System.in);
+		System.out.println("Enter a command: (send, print, or exit)");
+		String command = scanner.nextLine();
+		System.out.println(command);
+		if (command.equals( "send"))
+		{
+			System.out.println("Enter your message:");
+			String msg = scanner.nextLine();
+			sendMessage(msg);
+			enterCommand();
+		} else if (command.equals("print"))
+		{
+			sendPrintAll();
+			enterCommand();
+		} else if (command.equals("exit"))
+		{
+			System.exit(0);
+		} else
+		{
+			enterCommand();
 		}
 	}
 
@@ -102,7 +127,7 @@ public class client_java_tcp
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
 		}
 	}
-	
+
 	public void sendPrintAll()
 	{
 		try
@@ -113,12 +138,41 @@ public class client_java_tcp
 			byte[] bb = byteOut.toByteArray();
 			sendByteArray(bb);
 			System.out.println("sent printall packet");
+			
+			outer:
+			while (inputStream.available() != -1)
+			{
+				
+				int packetSize = inputStream.readShort();
+				byte packetBuffer[] = new byte[packetSize];
+				int byteTrans = 0;
+				while (byteTrans < packetSize)
+				{
+					inputStream.read(packetBuffer, byteTrans, 1);
+					byteTrans++;
+				}
+				ByteArrayInputStream bin = new ByteArrayInputStream(packetBuffer);
+				DataInputStream packetStream = new DataInputStream(bin);
+				int id = packetStream.readByte();
+				switch (id)
+				{
+					case PRINTALL:
+					{
+						int nn = packetStream.readShort();
+						for (int i = 0; i < nn; i++)
+						{
+							System.out.println(packetStream.readUTF());
+						}
+						break outer;
+					}
+				}
+			}
 		} catch (IOException e)
 		{
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
 		}
 	}
-	
+
 	public void sendMessage(String msg)
 	{
 		try
@@ -137,20 +191,19 @@ public class client_java_tcp
 		}
 	}
 
-	public void sendByteArray( byte[] ba )
+	public void sendByteArray(byte[] ba)
 	{
 		try
 		{
 			ByteArrayOutputStream bout = new ByteArrayOutputStream();
-			DataOutputStream dd = new DataOutputStream( bout );
-			dd.writeShort( ba.length );
-			dd.write( ba );
+			DataOutputStream dd = new DataOutputStream(bout);
+			dd.writeShort(ba.length);
+			dd.write(ba);
 			byte[] bb = bout.toByteArray();
 
 			outputStream.write(bb);
 			outputStream.flush();
-		}
-		catch( Exception e )
+		} catch (Exception e)
 		{
 		}
 	}
@@ -158,6 +211,11 @@ public class client_java_tcp
 
 	public static void main(String[] args)
 	{
+		if (args.length != 3)
+		{
+			System.err.println("Invalid number of args. Terminating.");
+			System.exit(0);
+		}
 		client_java_tcp client = new client_java_tcp(args[0], Integer.parseInt(args[1]), args[2]);
 		client.connect();
 		//server.run();

@@ -81,8 +81,33 @@ public class server_java_tcp implements Runnable
 		return id;
 	}
 	
+	public byte[] getMessageByteArray()
+	{
+		try
+		{
+			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			DataOutputStream out = new DataOutputStream(byteOut);
+			out.writeByte(PRINTALL);
+			out.writeShort(messages.size());
+			for (String message : messages)
+			{
+				out.writeUTF(message);
+			}
+			return (byteOut.toByteArray());
+		} catch (IOException e)
+		{
+			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+		}
+		return null;
+	}
+	
 	public static void main(String[] args)
 	{
+		if (args.length != 1)
+		{
+			System.out.println("Invalid number of args. Terminating.");
+			System.exit(0);
+		}
 		server_java_tcp server = new server_java_tcp(Integer.parseInt(args[0]));
 		server.run();
 	}
@@ -154,7 +179,6 @@ public class server_java_tcp implements Runnable
 				while ( inputStream.available() != -1 )
 				{
 					int packetSize = inputStream.readShort() ;
-					System.out.println( "read bytearray size:" + packetSize );
 					byte packetBuffer[] = new byte[packetSize];
 					int byteTrans = 0;
 					while ( byteTrans < packetSize )
@@ -165,7 +189,6 @@ public class server_java_tcp implements Runnable
 					ByteArrayInputStream bin = new ByteArrayInputStream( packetBuffer );
 					DataInputStream packetStream = new DataInputStream(bin);
 					int id = packetStream.readByte();
-					System.out.println("read id:" + id);
 					
 					switch (id)
 					{
@@ -178,10 +201,22 @@ public class server_java_tcp implements Runnable
 							DataOutputStream out = new DataOutputStream(byteOut);
 							out.writeByte(ACCEPTED);
 							out.writeUTF(identifier);
-							System.out.println("send id:" + identifier);
 							sendByteArray(byteOut.toByteArray());
 							sendWelcome();
 							break;
+						}
+						
+						case SEND:
+						{
+							String uuid = packetStream.readUTF();
+							String msg = packetStream.readUTF();
+							server.newMessage(uuid, msg);
+							break;
+						}
+						
+						case PRINTALL:
+						{
+							sendByteArray(server.getMessageByteArray());
 						}
 					}
 				}
