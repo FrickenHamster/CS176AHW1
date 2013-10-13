@@ -13,13 +13,23 @@ import java.util.*;
 public class server_java_tcp implements Runnable
 {
 	
+	/*
+	Most of the code here was adapted from a server I made for a flash game in Java. I believe I followed this tutorial at the time
+	http://www.broculos.net/2008/03/how-to-make-multi-client-flash-java.html#.UloZhhA5kgk
+	but a lot of it I changed.
+	
+	Initially I thought the server would be able to handle more than one client, and wrote it .It should still work with multiple clients but I haven't tested it.
+	
+	Usually methods have a output line used for debugging that has been commented out. That can be used to discern what the code does if its ambiguous.
+	*/
+	
 	private int port;
 	
 	private Boolean listening;
 	
 	private ServerSocket serverSocket;
 	
-	private Vector<chatConnection> connections;
+	private Vector<ChatConnection> connections;
 	
 	private Dictionary<String, String> usernameDict;
 	
@@ -36,7 +46,6 @@ public class server_java_tcp implements Runnable
 	public server_java_tcp(int port)
 	{
 		this.port = port;
-		
 		if (port < 1024 || port > 49151)
 		{
 			System.err.println("Invalid port. Terminating.");
@@ -44,15 +53,16 @@ public class server_java_tcp implements Runnable
 		}
 		
 		listening = false;
-		
+		// when created server doesn't listen
 		usernameDict = new Hashtable<String, String>(8);
-		connections = new Stack<chatConnection>();
+		connections = new Stack<ChatConnection>();
 		messages = new Stack<String>();
 	}
 
 	@Override
 	public void run()
 	{
+		//starts the actual server listening for tcp connections
 		listening = true;
 //		System.out.println("server started on port:" + port);
 		try
@@ -61,7 +71,8 @@ public class server_java_tcp implements Runnable
 			while (listening)
 			{
 				Socket socket = serverSocket.accept();
-				chatConnection cc = new chatConnection(socket, this);
+				//Aha tcp connection recieved
+				ChatConnection cc = new ChatConnection(socket, this);
 //				System.out.println("connection from:" + socket.getRemoteSocketAddress());
 				connections.add(cc);
 				cc.run();
@@ -71,6 +82,11 @@ public class server_java_tcp implements Runnable
 			System.err.println("Could not bind port. Terminating.");
 			System.exit(1);
 		}
+	}
+	
+	public void removeConnection(ChatConnection connection)
+	{
+		connections.remove(connection);
 	}
 	
 	public void newMessage(String identifier, String msg)
@@ -111,8 +127,8 @@ public class server_java_tcp implements Runnable
 		server.run();
 	}
 	
-	private class chatConnection extends Thread
-	{
+	private class ChatConnection extends Thread
+	{//each of these classes handles a seperate connection
 		private Socket socket;
 		private server_java_tcp server;
 		private DataOutputStream outputStream;
@@ -121,7 +137,7 @@ public class server_java_tcp implements Runnable
 		private String username;
 		private String identifier;
 
-		public chatConnection(Socket socket, server_java_tcp server)
+		public ChatConnection(Socket socket, server_java_tcp server)
 		{
 			this.socket = socket;
 			this.server = server;
@@ -164,12 +180,13 @@ public class server_java_tcp implements Runnable
 			}
 			catch( Exception e )
 			{
+				//there should be an exception thrown if trying to send packet when server is down, but it was not specified in the description so I just left it blank
 			}
 		}
 
 		@Override
 		public void run()
-		{
+		{//listening for any packets
 			try
 			{
 				inputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
@@ -184,7 +201,7 @@ public class server_java_tcp implements Runnable
 					{
 						inputStream.read( packetBuffer , byteTrans , 1 );
 						byteTrans++;
-					}
+					}//waits for entire packet
 					ByteArrayInputStream bin = new ByteArrayInputStream( packetBuffer );
 					DataInputStream packetStream = new DataInputStream(bin);
 					int id = packetStream.readByte();
@@ -192,7 +209,7 @@ public class server_java_tcp implements Runnable
 					switch (id)
 					{
 						case CONNECT:
-						{
+						{//recieved new username
 							username = packetStream.readUTF();
 //							System.out.println(username);
 							this.identifier = server.generateIdentifier(username);
@@ -206,7 +223,7 @@ public class server_java_tcp implements Runnable
 						}
 						
 						case SEND:
-						{
+						{//new mesasge
 							String uuid = packetStream.readUTF();
 							String msg = packetStream.readUTF();
 							server.newMessage(uuid, msg);
@@ -214,7 +231,7 @@ public class server_java_tcp implements Runnable
 						}
 						
 						case PRINTALL:
-						{
+						{//wants printall
 							sendMessage(server.getMessagesString());
 						}
 					}
@@ -222,7 +239,20 @@ public class server_java_tcp implements Runnable
 			}
 			catch (IOException e)
 			{
-				e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+				//connection broken
+				closeConnection();
+			}
+			
+		}
+		public void closeConnection()
+		{
+			try
+			{
+				socket.close();
+				server.removeConnection(this);
+			} catch (IOException e)
+			{
+
 			}
 		}
 	}

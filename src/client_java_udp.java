@@ -8,6 +8,10 @@ import java.util.*;
  * Date: 10/9/13
  * Time: 11:24 AM
  */
+
+/*
+	I looked over the slides and the code here http://systembash.com/content/a-simple-java-udp-server-and-udp-client/ and basically did what I thought made sense
+	*/
 public class client_java_udp
 {
 	private String username;
@@ -16,7 +20,7 @@ public class client_java_udp
 	private DatagramSocket socket;
 	private InetAddress host;
 	private int port;
-	private byte netbit;
+	private byte netbit;//netbit is used to id packets for acks
 	
 	public static final byte CONNECT = 0x01;
 	public static final byte ACCEPTED = 0x02;
@@ -47,7 +51,7 @@ public class client_java_udp
 		enterCommand();
 	}
 	public void sendSizePacket(int size, int nb)
-	{
+	{//size packet is sent first so other end knows how big the incoming file is
 		try
 		{
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
@@ -61,7 +65,7 @@ public class client_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -77,7 +81,7 @@ public class client_java_udp
 	}
 	
 	public void sendConnect()
-	{
+	{//sends connection request
 		try
 		{
 			int nb = netbit;
@@ -97,7 +101,7 @@ public class client_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -162,7 +166,7 @@ public class client_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -196,7 +200,7 @@ public class client_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -271,7 +275,7 @@ public class client_java_udp
 	}
 	
 	public boolean waitWelcome()
-	{
+	{//called after sending connect to recieves id and welcome message
 		try
 		{
 			byte[] sizeByte = new byte[16];
@@ -332,7 +336,7 @@ public class client_java_udp
 	}
 	
 	public boolean waitAck(int nb)
-	{
+	{//waits for Ack file
 		try
 		{
 			while(true)
@@ -388,7 +392,7 @@ public class client_java_udp
 
 
 	public void incNetbit(int nn)
-	{
+	{//keeps the netbit from going over a byte
 		netbit += nn;
 		if (netbit > 100)
 			netbit -= 100;

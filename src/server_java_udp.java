@@ -10,12 +10,17 @@ import java.util.*;
  * Date: 10/9/13
  * Time: 11:34 AM
  */
+
+/*
+	I looked over the slides and the code here http://systembash.com/content/a-simple-java-udp-server-and-udp-client/ and basically did what I thought made sense
+	*/
+
 public class server_java_udp
 {
 	private DatagramSocket socket;
 	private int port;
 	
-	private byte netbit;
+	private byte netbit;//netbit is used to identify packets for ACK and stuff
 
 	private Dictionary<String, String> usernameDict;
 	private ArrayList<String> messages;
@@ -63,7 +68,7 @@ public class server_java_udp
 	}
 	
 	public void listenCommand()
-	{
+	{//this method just listens for any packets
 		try
 		{
 			byte[] sizeByte = new byte[16];
@@ -157,7 +162,7 @@ public class server_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -193,7 +198,7 @@ public class server_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -235,7 +240,7 @@ public class server_java_udp
 			do
 			{
 				if (timesSent == 3)
-				{
+				{// sends a packet up to 3 times if ack is not recieved
 					System.err.println("Failed to send message. Terminating.");
 					System.exit(1);
 				}
@@ -251,7 +256,7 @@ public class server_java_udp
 	}
 
 	public void sendSizePacket(int size, int nb, InetAddress address, int port)
-	{
+	{//size packet is sent first so other end knows how big the incoming file is
 		try
 		{
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();

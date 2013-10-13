@@ -11,6 +11,12 @@ import java.util.Scanner;
 public class client_java_tcp
 {
 
+	/*
+	Most of the code here was adapted from a server I made for a flash game in Java. I believe I followed this tutorial at the time
+	http://www.broculos.net/2008/03/how-to-make-multi-client-flash-java.html#.UloZhhA5kgk
+	I looked at the lecture slides and used logic to work out how a client would work with tcp sockets
+	*/
+	
 	private String host;
 	private int port;
 	private String username;
@@ -45,6 +51,7 @@ public class client_java_tcp
 	{
 		try
 		{
+			//try to connection to server
 			socket = new Socket(host, port);
 
 			outputStream = new DataOutputStream(socket.getOutputStream());
@@ -54,7 +61,7 @@ public class client_java_tcp
 			outer:
 			while (inputStream.available() != -1)
 			{
-				
+				//listen for initialization
 				int packetSize = inputStream.readShort();
 //				System.out.println("read bytearray size:" + packetSize);
 				byte packetBuffer[] = new byte[packetSize];
@@ -63,7 +70,7 @@ public class client_java_tcp
 				{
 					inputStream.read(packetBuffer, byteTrans, 1);
 					byteTrans++;
-				}
+				}//this snippit basically waits until entire packet is received
 				ByteArrayInputStream bin = new ByteArrayInputStream(packetBuffer);
 				DataInputStream packetStream = new DataInputStream(bin);
 				int id = packetStream.readByte();
@@ -100,6 +107,7 @@ public class client_java_tcp
 	
 	public void enterCommand()
 	{
+		
 		Scanner scanner = new Scanner(System.in);
 		System.out.println("Enter a command: (send, print, or exit)");
 		String command = scanner.nextLine();
@@ -126,7 +134,7 @@ public class client_java_tcp
 	public void sendConnect()
 	{
 		try
-		{
+		{//send connect packet
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			DataOutputStream out = new DataOutputStream(byteOut);
 			out.writeByte(CONNECT);
@@ -143,7 +151,7 @@ public class client_java_tcp
 	public void sendPrintAll()
 	{
 		try
-		{
+		{//send print packet
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			DataOutputStream out = new DataOutputStream(byteOut);
 			out.writeByte(PRINTALL);
@@ -154,7 +162,7 @@ public class client_java_tcp
 			outer:
 			while (inputStream.available() != -1)
 			{
-				
+				//waits for the printed message
 				int packetSize = inputStream.readShort();
 				byte packetBuffer[] = new byte[packetSize];
 				int byteTrans = 0;
