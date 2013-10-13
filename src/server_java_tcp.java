@@ -23,19 +23,26 @@ public class server_java_tcp implements Runnable
 	
 	private Dictionary<String, String> usernameDict;
 	
-	public static String WELCOME = "Kouhai chan kawaii";
+	public static String WELCOME;
 
 	public static final byte CONNECT = 0x01;
 	public static final byte ACCEPTED = 0x02;
 	public static final byte PRINTALL = 0x03;
 	public static final byte SEND = 0x04;
-	public static final byte MESSAGE = 0x05;
+	public static final byte CONTENT = 0x05;
 
 	public Vector<String> messages;
 	
 	public server_java_tcp(int port)
 	{
 		this.port = port;
+		
+		if (port < 1024 || port > 49151)
+		{
+			System.err.println("Invalid port. Terminating.");
+			System.exit(1);
+		}
+		
 		listening = false;
 		
 		usernameDict = new Hashtable<String, String>(8);
@@ -47,7 +54,7 @@ public class server_java_tcp implements Runnable
 	public void run()
 	{
 		listening = true;
-		System.out.println("server started on port:" + port);
+//		System.out.println("server started on port:" + port);
 		try
 		{
 			serverSocket = new ServerSocket(port);
@@ -55,14 +62,14 @@ public class server_java_tcp implements Runnable
 			{
 				Socket socket = serverSocket.accept();
 				chatConnection cc = new chatConnection(socket, this);
-				System.out.println("connection from:" + socket.getRemoteSocketAddress());
+//				System.out.println("connection from:" + socket.getRemoteSocketAddress());
 				connections.add(cc);
 				cc.run();
 			}
 		} catch (IOException e)
 		{
-			System.out.println("error");
-			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+			System.err.println("Could not bind port. Terminating.");
+			System.exit(1);
 		}
 	}
 	
@@ -81,33 +88,25 @@ public class server_java_tcp implements Runnable
 		return id;
 	}
 	
-	public byte[] getMessageByteArray()
+	public String getMessagesString()
 	{
-		try
+		StringBuilder stringBuilder = new StringBuilder();
+		for (String message : messages)
 		{
-			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-			DataOutputStream out = new DataOutputStream(byteOut);
-			out.writeByte(PRINTALL);
-			out.writeShort(messages.size());
-			for (String message : messages)
-			{
-				out.writeUTF(message);
-			}
-			return (byteOut.toByteArray());
-		} catch (IOException e)
-		{
-			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+			stringBuilder.append(message);
 		}
-		return null;
+		return stringBuilder.toString();
 	}
 	
 	public static void main(String[] args)
 	{
 		if (args.length != 1)
 		{
-			System.out.println("Invalid number of args. Terminating.");
+			System.err.println("Invalid number of args. Terminating.");
 			System.exit(0);
 		}
+		Scanner scanner = new Scanner(System.in);
+		WELCOME = scanner.nextLine();
 		server_java_tcp server = new server_java_tcp(Integer.parseInt(args[0]));
 		server.run();
 	}
@@ -135,10 +134,10 @@ public class server_java_tcp implements Runnable
 			{
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 				DataOutputStream out = new DataOutputStream(byteOut);
-				out.writeByte(MESSAGE);
+				out.writeByte(CONTENT);
 				out.writeUTF(msg);
 				sendByteArray(byteOut.toByteArray());
-				System.out.println("sent msg:" + msg);
+//				System.out.println("sent msg:" + msg);
 			} catch (IOException e)
 			{
 				e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
@@ -195,7 +194,7 @@ public class server_java_tcp implements Runnable
 						case CONNECT:
 						{
 							username = packetStream.readUTF();
-							System.out.println(username);
+//							System.out.println(username);
 							this.identifier = server.generateIdentifier(username);
 							ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 							DataOutputStream out = new DataOutputStream(byteOut);
@@ -216,7 +215,7 @@ public class server_java_tcp implements Runnable
 						
 						case PRINTALL:
 						{
-							sendByteArray(server.getMessageByteArray());
+							sendMessage(server.getMessagesString());
 						}
 					}
 				}

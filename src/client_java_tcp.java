@@ -27,10 +27,15 @@ public class client_java_tcp
 	public static final byte ACCEPTED = 0x02;
 	public static final byte PRINTALL = 0x03;
 	public static final byte SEND = 0x04;
-	public static final byte MESSAGE = 0x05;
+	public static final byte CONTENT = 0x05;
 
 	public client_java_tcp(String host, int port, String userName)
 	{
+		if (port < 1024 || port > 49151)
+		{
+			System.err.println("Invalid port. Terminating.");
+			System.exit(1);
+		}
 		this.host = host;
 		this.port = port;
 		this.username = userName;
@@ -51,7 +56,7 @@ public class client_java_tcp
 			{
 				
 				int packetSize = inputStream.readShort();
-				System.out.println("read bytearray size:" + packetSize);
+//				System.out.println("read bytearray size:" + packetSize);
 				byte packetBuffer[] = new byte[packetSize];
 				int byteTrans = 0;
 				while (byteTrans < packetSize)
@@ -62,27 +67,34 @@ public class client_java_tcp
 				ByteArrayInputStream bin = new ByteArrayInputStream(packetBuffer);
 				DataInputStream packetStream = new DataInputStream(bin);
 				int id = packetStream.readByte();
-				System.out.println("read id:" + id);
+//				System.out.println("read id:" + id);
 				switch (id)
 				{
 					case ACCEPTED:
 					{
 						identifier = packetStream.readUTF();
-						
+						break;
+					}
+
+					case CONTENT:
+					{
+						System.out.println(packetStream.readUTF());
 						break outer;
+					}
+					
+					default:
+					{
+						System.err.println("Invalid server initialization. Terminating.");
+						System.exit(1);
 					}
 				}
 			}
 			
 			enterCommand();
-
-			
-		} catch (UnknownHostException e)
+		}catch (IOException e)
 		{
-			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-		} catch (IOException e)
-		{
-			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+			System.err.println("Could not connect to server. Terminating.");
+			System.exit(1);
 		}
 	}
 	
@@ -91,7 +103,7 @@ public class client_java_tcp
 		Scanner scanner = new Scanner(System.in);
 		System.out.println("Enter a command: (send, print, or exit)");
 		String command = scanner.nextLine();
-		System.out.println(command);
+//		System.out.println(command);
 		if (command.equals( "send"))
 		{
 			System.out.println("Enter your message:");
@@ -121,7 +133,7 @@ public class client_java_tcp
 			out.writeUTF(username);
 			byte[] bb = byteOut.toByteArray();
 			sendByteArray(bb);
-			System.out.println("sent connect packet");
+//			System.out.println("sent connect packet");
 		} catch (IOException e)
 		{
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
@@ -137,7 +149,7 @@ public class client_java_tcp
 			out.writeByte(PRINTALL);
 			byte[] bb = byteOut.toByteArray();
 			sendByteArray(bb);
-			System.out.println("sent printall packet");
+//			System.out.println("sent printall packet");
 			
 			outer:
 			while (inputStream.available() != -1)
@@ -154,17 +166,18 @@ public class client_java_tcp
 				ByteArrayInputStream bin = new ByteArrayInputStream(packetBuffer);
 				DataInputStream packetStream = new DataInputStream(bin);
 				int id = packetStream.readByte();
+//				System.out.println(id);
 				switch (id)
 				{
-					case PRINTALL:
+					case CONTENT:
 					{
-						int nn = packetStream.readShort();
-						for (int i = 0; i < nn; i++)
-						{
-							System.out.println(packetStream.readUTF());
-						}
+						System.out.println(packetStream.readUTF());
 						break outer;
 					}
+					default:
+						System.err.println("Invalid packet from server. Terminating.");
+						System.exit(1);
+						break;
 				}
 			}
 		} catch (IOException e)
@@ -181,10 +194,10 @@ public class client_java_tcp
 			DataOutputStream out = new DataOutputStream(byteOut);
 			out.writeByte(SEND);
 			out.writeUTF(identifier);
-			out.writeUTF(msg);
+			out.writeUTF(msg + '\n');
 			byte[] bb = byteOut.toByteArray();
 			sendByteArray(bb);
-			System.out.println("sent connect packet");
+//			System.out.println("sent connect packet");
 		} catch (IOException e)
 		{
 			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
@@ -214,7 +227,7 @@ public class client_java_tcp
 		if (args.length != 3)
 		{
 			System.err.println("Invalid number of args. Terminating.");
-			System.exit(0);
+			System.exit(1);
 		}
 		client_java_tcp client = new client_java_tcp(args[0], Integer.parseInt(args[1]), args[2]);
 		client.connect();
