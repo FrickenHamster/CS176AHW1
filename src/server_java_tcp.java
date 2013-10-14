@@ -122,7 +122,9 @@ public class server_java_tcp implements Runnable
 			System.exit(0);
 		}
 		Scanner scanner = new Scanner(System.in);
-		WELCOME = scanner.nextLine();
+		WELCOME = "";
+		while(scanner.hasNext())
+			WELCOME += scanner.nextLine() + '\n';
 		server_java_tcp server = new server_java_tcp(Integer.parseInt(args[0]));
 		server.run();
 	}

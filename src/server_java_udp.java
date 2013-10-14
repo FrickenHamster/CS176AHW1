@@ -353,7 +353,8 @@ public class server_java_udp
 			System.exit(0);
 		}
 		Scanner scanner = new Scanner(System.in);
-		WELCOME = scanner.nextLine();
+		while(scanner.hasNext())
+			WELCOME += scanner.nextLine() + '\n';
 		server_java_udp server = new server_java_udp(Integer.parseInt(args[0]));
 		server.start();
 	}
